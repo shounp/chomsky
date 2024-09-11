@@ -1,0 +1,10 @@
+2
+c,d
+4
+X,Y,Z,T_c
+X
+4
+X -> Y Z
+Y -> T_c
+Z -> T_c | d
+T_c -> c

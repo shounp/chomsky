@@ -3,7 +3,6 @@
 #include <sstream>
 #include <vector>
 #include <unordered_map>
-#include <unordered_set>
 #include <string>
 #include <algorithm>
 
@@ -20,94 +19,27 @@ vector<string> split(const string &str, char delimiter) {
     return tokens;
 }
 
-// Função para verificar se uma string é terminal
-bool isTerminal(const string &symbol, const unordered_set<string> &terminals) {
-    return terminals.find(symbol) != terminals.end();
+// Função auxiliar para remover espaços em branco ao redor de uma string
+string trim(const string &str) {
+    size_t first = str.find_first_not_of(' ');
+    if (first == string::npos)
+        return "";
+    size_t last = str.find_last_not_of(' ');
+    return str.substr(first, last - first + 1);
 }
 
-// Função para converter uma gramática para a Forma Normal de Chomsky
-void convertToChomskyNormalForm(
-    unordered_set<string> &terminals,
-    unordered_set<string> &nonTerminals,
-    string &startSymbol,
-    vector<pair<string, string>> &productions
-) {
-    // Mapeia terminais para novos não-terminais como T_a, T_b, etc.
-    unordered_map<string, string> terminalMappings;
-
-    // Passo 1: Substituir terminais por novos não-terminais
-    for (auto &production : productions) {
-        string lhs = production.first;
-        string rhs = production.second;
-
-        string new_rhs; // Nova string para o lado direito da produção
-
-        // Construir o novo lado direito substituindo terminais
-        for (size_t i = 0; i < rhs.length(); ++i) {
-            string symbol(1, rhs[i]);
-            if (isTerminal(symbol, terminals)) {
-                if (terminalMappings.find(symbol) == terminalMappings.end()) {
-                    // Cria um novo não-terminal para cada terminal, no formato T_a, T_b, etc.
-                    string newNonTerminal = "T_" + symbol;
-                    terminalMappings[symbol] = newNonTerminal;
-                    nonTerminals.insert(newNonTerminal); // Adiciona ao conjunto de não-terminais
-                }
-                new_rhs += terminalMappings[symbol]; // Adicionar o não-terminal correspondente
-            } else {
-                new_rhs += symbol; // Adicionar o símbolo não-terminal original
-            }
-        }
-        production.second = new_rhs; // Atualizar o lado direito da produção
+// Função para lidar com produções alternativas com "|"
+vector<pair<string, string>> handleAlternatives(const string &lhs, const string &rhs) {
+    vector<pair<string, string>> productions;
+    vector<string> alternatives = split(rhs, '|'); // Divide as alternativas por "|"
+    for (const auto &alt : alternatives) {
+        productions.push_back(make_pair(lhs, trim(alt))); // Adiciona cada alternativa como uma produção separada
     }
-
-    // Passo 2: Dividir produções que têm mais de dois símbolos no lado direito
-    vector<pair<string, string>> newProductions;
-    int newVarCount = 1;
-
-    for (auto &production : productions) {
-        string lhs = production.first;
-        string rhs = production.second;
-
-        // Aqui, vamos dividir rhs em símbolos (não caracteres)
-        vector<string> symbols;
-        for (size_t i = 0; i < rhs.length();) {
-            if (rhs[i] == 'T' && i + 2 < rhs.length() && rhs[i + 1] == '_') {
-                // Encontrou um terminal substituído, como T_a
-                symbols.push_back(rhs.substr(i, 3)); // Adiciona o símbolo completo T_a
-                i += 3;
-            } else {
-                // Caso contrário, trata o símbolo normalmente
-                symbols.push_back(string(1, rhs[i]));
-                i++;
-            }
-        }
-
-        // Agora verifica se o lado direito tem mais de 2 símbolos
-        if (symbols.size() > 2) {
-            string prevVar = lhs;
-            for (size_t i = 0; i < symbols.size() - 2; ++i) {
-                string newVar = "X" + to_string(newVarCount++); // Criar novo não-terminal intermediário
-                nonTerminals.insert(newVar);
-                newProductions.push_back({prevVar, symbols[i] + newVar});
-                prevVar = newVar;
-            }
-            newProductions.push_back({prevVar, symbols[symbols.size() - 2] + symbols[symbols.size() - 1]});
-        } else {
-            newProductions.push_back(production);
-        }
-    }
-
-    productions = newProductions;
-
-    // Adicionar as novas produções para os terminais
-    for (auto &entry : terminalMappings) {
-        productions.push_back({entry.second, entry.first});
-    }
+    return productions;
 }
 
-
-// Função para carregar o arquivo de entrada
-void loadGrammar(const string &filename,unordered_set<string> &terminals,unordered_set<string> &nonTerminals,string &startSymbol,vector<pair<string, string>> &productions) {
+// Modificação na leitura das produções na função loadGrammar
+void loadGrammar(const string &filename,vector<string> &terminals,vector<string> &nonTerminals,string &startSymbol,vector<pair<string, string>> &productions) {
     ifstream infile(filename);
     if (!infile) {
         cerr << "Erro ao abrir arquivo de entrada!" << endl;
@@ -115,50 +47,33 @@ void loadGrammar(const string &filename,unordered_set<string> &terminals,unorder
     }
 
     string line;
-    // Linha 1: Número total de símbolos terminais
-    getline(infile, line);
-
-    // Linha 2: Símbolos terminais
-    getline(infile, line);
+    getline(infile, line); // Número total de símbolos terminais
+    getline(infile, line); // Símbolos terminais
     vector<string> terminalSymbols = split(line, ',');
-    for (const string &t : terminalSymbols) {
-        terminals.insert(t);
-    }
+    terminals.insert(terminals.end(), terminalSymbols.begin(), terminalSymbols.end());
 
-    // Linha 3: Número total de símbolos não-terminais
-    getline(infile, line);
-
-    // Linha 4: Símbolos não-terminais
-    getline(infile, line);
+    getline(infile, line); // Número total de símbolos não-terminais
+    getline(infile, line); // Símbolos não-terminais
     vector<string> nonTerminalSymbols = split(line, ',');
-    for (const string &nt : nonTerminalSymbols) {
-        nonTerminals.insert(nt);
-    }
+    nonTerminals.insert(nonTerminals.end(), nonTerminalSymbols.begin(), nonTerminalSymbols.end());
 
-    // Linha 5: Símbolo inicial
-    getline(infile, line);
+    getline(infile, line); // Símbolo inicial
     startSymbol = line;
 
-    // Linha 6: Número total de produções
-    getline(infile, line);
-
-    // Linhas seguintes: Produções
+    getline(infile, line); // Número total de produções
     while (getline(infile, line)) {
         size_t arrowPos = line.find("->");
-        string lhs = line.substr(0, arrowPos - 1);
-        string rhs = line.substr(arrowPos + 3);
-        productions.push_back({lhs, rhs});
+        string lhs = trim(line.substr(0, arrowPos - 1));
+        string rhs = trim(line.substr(arrowPos + 3));
+        vector<pair<string, string>> newProductions = handleAlternatives(lhs, rhs);
+        productions.insert(productions.end(), newProductions.begin(), newProductions.end());
     }
 
     infile.close();
 }
 
 // Função para salvar o arquivo de saída
-void saveGrammar(const string &filename,
-                 const unordered_set<string> &terminals,
-                 const unordered_set<string> &nonTerminals,
-                 const string &startSymbol,
-                 const vector<pair<string, string>> &productions) {
+void saveGrammar(const string &filename,const vector<string> &terminals,const vector<string> &nonTerminals,const string &startSymbol,const vector<pair<string, string>> &productions) {
     ofstream outfile(filename);
     if (!outfile) {
         cerr << "Erro ao abrir arquivo de saída!" << endl;
@@ -169,29 +84,25 @@ void saveGrammar(const string &filename,
     outfile << terminals.size() << endl;
 
     // Linha 2: Símbolos terminais (imprime na mesma linha, separado por vírgula)
-    bool first = true;
-    for (const auto &t : terminals) {
-        if (!first) {
+    for (size_t i = 0; i < terminals.size(); ++i) {
+        if (i > 0) {
             outfile << ",";
         }
-        outfile << t;
-        first = false;
+        outfile << terminals[i];
     }
-    outfile << endl; // Garantir que há uma quebra de linha no final da lista de terminais
+    outfile << endl;
 
     // Linha 3: Número total de símbolos não-terminais
     outfile << nonTerminals.size() << endl;
 
     // Linha 4: Símbolos não-terminais (imprime na mesma linha, separado por vírgula)
-    first = true;
-    for (const auto &nt : nonTerminals) {
-        if (!first) {
+    for (size_t i = 0; i < nonTerminals.size(); ++i) {
+        if (i > 0) {
             outfile << ",";
         }
-        outfile << nt;
-        first = false;
+        outfile << nonTerminals[i];
     }
-    outfile << endl; // Garantir que há uma quebra de linha no final da lista de não-terminais
+    outfile << endl; // Garante que todos os não-terminais sejam impressos na mesma linha
 
     // Linha 5: Símbolo inicial
     outfile << startSymbol << endl;
@@ -199,14 +110,100 @@ void saveGrammar(const string &filename,
     // Linha 6: Número total de produções
     outfile << productions.size() << endl;
 
+    vector<pair<string, string>> copProductions;
+    copy(productions.begin(),productions.end(),back_inserter(copProductions));
     // Linhas seguintes: Produções
-    for (const auto &production : productions) {
-        outfile << production.first << " -> " << production.second << endl;
+    for (int k=0; k <=copProductions.size(); k++) {
+        for(int j=k; j <copProductions.size(); j++) {
+            if(k<j){
+                if(copProductions[j].first == copProductions[k].first){
+                    copProductions[k].second = copProductions[k].second + "|" + copProductions[j].second;
+                    copProductions.erase(copProductions.begin()+j);
+                }
+            }
+        }
+    }
+    for (size_t i=0; i <copProductions.size(); i++) {
+        outfile << copProductions[i].first << " -> " << copProductions[i].second << endl;
     }
 
     outfile.close();
 }
 
+// Função para converter uma gramática para a Forma Normal de Chomsky
+void convertToChomskyNormalForm(
+    vector<string> &terminals,
+    vector<string> &nonTerminals,
+    string &startSymbol,
+    vector<pair<string, string>> &productions
+) {
+    unordered_map<string, string> terminalMappings;
+
+    for (auto &production : productions) {
+        string lhs = production.first;
+        string rhs = production.second;
+
+        string new_rhs;
+
+        // Substituição de terminais por novos não-terminais
+        for (size_t i = 0; i < rhs.length(); ++i) {
+            string symbol(1, rhs[i]);
+            if (find(terminals.begin(), terminals.end(), symbol) != terminals.end() && rhs.length()>1) {
+                if (terminalMappings.find(symbol) == terminalMappings.end()) {
+                    // Adicionar novo não-terminal correspondente, como T_a
+                    string newNonTerminal = "T_" + symbol;
+                    terminalMappings[symbol] = newNonTerminal;
+                    if (find(nonTerminals.begin(), nonTerminals.end(), newNonTerminal) == nonTerminals.end()) {
+                        nonTerminals.push_back(newNonTerminal);
+                    }
+                }
+                new_rhs += terminalMappings[symbol];
+            } else {
+                new_rhs += symbol;
+            }
+        }
+        production.second = new_rhs;
+    }
+
+    vector<pair<string, string>> newProductions;
+    int newVarCount = 1;
+
+    // Dividir as produções com mais de dois símbolos no lado direito
+    for (auto &production : productions) {
+        string lhs = production.first;
+        string rhs = production.second;
+
+        vector<string> symbols;
+        for (size_t i = 0; i < rhs.length();) {
+            if (rhs[i] == 'T' && i + 2 < rhs.length() && rhs[i + 1] == '_') {
+                symbols.push_back(rhs.substr(i, 3));
+                i += 3;
+            } else {
+                symbols.push_back(string(1, rhs[i]));
+                i++;
+            }
+        }
+
+        if (symbols.size() > 2) {
+            string prevVar = lhs;
+            for (size_t i = 0; i < symbols.size() - 2; ++i) {
+                string newVar = "X" + to_string(newVarCount++);
+                nonTerminals.push_back(newVar);
+                newProductions.push_back(make_pair(prevVar, symbols[i] + newVar));
+                prevVar = newVar;
+            }
+            newProductions.push_back(make_pair(prevVar, symbols[symbols.size() - 2] + symbols[symbols.size() - 1]));
+        } else {
+            newProductions.push_back(production);
+        }
+    }
+
+    productions = newProductions;
+
+    for (auto &entry : terminalMappings) {
+        productions.push_back(make_pair(entry.second, entry.first));
+    }
+}
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
@@ -217,18 +214,13 @@ int main(int argc, char *argv[]) {
     string inputFile = argv[1];
     string outputFile = argv[2];
 
-    unordered_set<string> terminals;
-    unordered_set<string> nonTerminals;
+    vector<string> terminals;
+    vector<string> nonTerminals;
     string startSymbol;
     vector<pair<string, string>> productions;
 
-    // Carregar gramática do arquivo de entrada
     loadGrammar(inputFile, terminals, nonTerminals, startSymbol, productions);
-
-    // Converter para Forma Normal de Chomsky
     convertToChomskyNormalForm(terminals, nonTerminals, startSymbol, productions);
-
-    // Salvar gramática no arquivo de saída
     saveGrammar(outputFile, terminals, nonTerminals, startSymbol, productions);
 
     cout << "Gramática convertida para Forma Normal de Chomsky e salva em: " << outputFile << endl;

@@ -1,0 +1,10 @@
+2
+a,b
+4
+S,A,B,T_a
+S
+4
+S -> A B
+A -> T_a
+B -> T_a | b
+T_a -> a
