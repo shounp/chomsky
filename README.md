@@ -28,13 +28,13 @@ Para executar o programa, utilize o seguinte comando:
 ### 4. Formato do arquivo de entrada
 O arquivo de entrada deve seguir o seguinte formato:
 
--Linha 1: Número total de símbolos terminais.
--Linha 2: Lista de símbolos terminais separados por vírgulas.
--Linha 3: Número total de símbolos não-terminais.
--Linha 4: Lista de símbolos não-terminais separados por vírgulas.
--Linha 5: Símbolo inicial.
--Linha 6: Número total de produções.
--Linhas seguintes: Produções no formato LHS -> RHS, onde LHS é o lado esquerdo da produção e RHS pode conter terminais, não-terminais ou alternativas separadas por "|".
+*Linha 1: Número total de símbolos terminais.
+*Linha 2: Lista de símbolos terminais separados por vírgulas.
+*Linha 3: Número total de símbolos não-terminais.
+*Linha 4: Lista de símbolos não-terminais separados por vírgulas.
+*Linha 5: Símbolo inicial.
+*Linha 6: Número total de produções.
+*Linhas seguintes: Produções no formato LHS -> RHS, onde LHS é o lado esquerdo da produção e RHS pode conter terminais, não-terminais ou alternativas separadas por "|".
 
 ### 5. Formato do arquivo de saída
 O arquivo de saída seguirá o mesmo formato do arquivo de entrada, mas a gramática estará na Forma Normal de Chomsky (FNC).
