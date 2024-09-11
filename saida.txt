@@ -1,12 +1,0 @@
-2
-a,b
-6
-S,A,B,T_a,X1,X2
-S
-7
-S -> AX1
-X1 ->  X2
-X2 -> B
-A -> T_a
-B -> b|T_a
-T_a -> a
